@@ -23,34 +23,38 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
 
     bool isRender = !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("RENDER"));
 
-    if (!string.IsNullOrEmpty(dbUrl) && dbUrl.Length > 15) // Sanity check: must be longer than just 'postgres://'
+    if (!string.IsNullOrEmpty(dbUrl) && dbUrl.Length > 20) 
     {
-        Console.WriteLine($"DB Config: Using DATABASE_URL environment variable (Length: {dbUrl.Length}).");
-        // 1. Clean the string
+        Console.WriteLine($"DB Config: Processing DATABASE_URL (Length: {dbUrl.Length}).");
         dbUrl = dbUrl.Trim().Trim('"').Trim('\'');
         string connStr = dbUrl;
 
-        // 2. If it's a URL, ensure SSL settings are present
-        if (dbUrl.Contains("://") && !dbUrl.Contains("sslmode=", StringComparison.OrdinalIgnoreCase))
+        if (dbUrl.Contains("://"))
         {
-            dbUrl += (dbUrl.Contains("?") ? "&" : "?") + "sslmode=require&TrustServerCertificate=true";
-            connStr = dbUrl;
-        }
+            try 
+            {
+                // URL: postgresql://user:password@host:port/database
+                var uri = new Uri(dbUrl);
+                var userInfo = (uri.UserInfo ?? "").Split(':');
+                var user = userInfo[0];
+                var pass = userInfo.Length > 1 ? userInfo[1] : "";
+                var host = uri.Host;
+                var port = uri.Port > 0 ? uri.Port : 5432;
+                var database = uri.LocalPath.TrimStart('/');
+                
+                // Clean database name of any query params
+                if (database.Contains("?")) database = database.Split('?')[0];
 
-        // 3. Debug logging (masking password)
-        var masked = connStr;
-        if (masked.Contains("://") && masked.Contains(":") && masked.Contains("@"))
-        {
-             var start = masked.IndexOf("://") + 3;
-             var end = masked.LastIndexOf("@");
-             var userInfo = masked.Substring(start, end - start);
-             if (userInfo.Contains(":"))
-             {
-                 var user = userInfo.Split(':')[0];
-                 masked = masked.Replace(userInfo, $"{user}:********");
-             }
+                // Build a standard Key=Value string
+                connStr = $"Host={host};Port={port};Username={user};Password={pass};Database={database};SSL Mode=Require;Trust Server Certificate=true";
+                
+                Console.WriteLine($"DB Config: Converted URL to standard Host={host} format.");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"DB Config: Note - URL conversion failed ({ex.Message}). Using raw string.");
+            }
         }
-        Console.WriteLine($"DB Config: Connection string being used: {masked}");
         
         options.UseNpgsql(connStr);
     }
