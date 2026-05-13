@@ -21,6 +21,8 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
     // 2. Fallback to appsettings / environment ConnectionStrings:DefaultConnection
     var defaultConn = builder.Configuration.GetConnectionString("DefaultConnection");
 
+    bool isRender = !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("RENDER"));
+
     if (!string.IsNullOrEmpty(dbUrl))
     {
         Console.WriteLine("DB Config: Using DATABASE_URL environment variable.");
@@ -44,9 +46,16 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
         }
         options.UseNpgsql(connStr);
     }
+    else if (isRender)
+    {
+        // We are on Render but DATABASE_URL is missing. 
+        // Do not fall back to SQL Server as it will crash.
+        throw new InvalidOperationException("CRITICAL: Running on Render but 'DATABASE_URL' is not set. " + 
+            "Please add 'DATABASE_URL' to your Render Environment Variables with your PostgreSQL connection string.");
+    }
     else if (!string.IsNullOrEmpty(defaultConn))
     {
-        // If the string contains "Host=" it's likely a Postgres string already
+        // Local development or manual config
         if (defaultConn.Contains("Host=", StringComparison.OrdinalIgnoreCase) || 
             defaultConn.Contains("Username=", StringComparison.OrdinalIgnoreCase))
         {
