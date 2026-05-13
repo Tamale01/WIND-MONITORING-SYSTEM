@@ -7,67 +7,61 @@ using WindMonitoringSystem.Services;
 var builder = WebApplication.CreateBuilder(args);
 
 // ── Connection String ──────────────────────────────────────────────────────────
-// Use environment variable CONNECTIONSTRINGS__DEFAULTCONNECTION in production;
-// falls back to appsettings.json for development.
-var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
-    ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
+// builder.Configuration.GetConnectionString("DefaultConnection") logic moved inside AddDbContext.
+
 
 // ── Database & Identity ────────────────────────────────────────────────────────
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
 {
-    // Render provides various environment variables for the database
-    var databaseUrl = Environment.GetEnvironmentVariable("DATABASE_URL") 
-                   ?? Environment.GetEnvironmentVariable("INTERNAL_DATABASE_URL")
-                   ?? Environment.GetEnvironmentVariable("EXTERNAL_DATABASE_URL");
-    
-    bool isRender = !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("RENDER"));
-    
-    // Determine the final connection string to use
-    string activeString = !string.IsNullOrEmpty(databaseUrl) ? databaseUrl : connectionString;
+    // 1. Try to get connection string from DATABASE_URL (Render Postgres)
+    var dbUrl = Environment.GetEnvironmentVariable("DATABASE_URL") 
+             ?? Environment.GetEnvironmentVariable("INTERNAL_DATABASE_URL")
+             ?? Environment.GetEnvironmentVariable("EXTERNAL_DATABASE_URL");
 
-    // Decide whether to use Postgres
-    bool usePostgres = isRender || 
-                       activeString.StartsWith("postgres://") || 
-                       activeString.StartsWith("postgresql://") || 
-                       activeString.Contains("Host=");
+    // 2. Fallback to appsettings / environment ConnectionStrings:DefaultConnection
+    var defaultConn = builder.Configuration.GetConnectionString("DefaultConnection");
 
-    if (usePostgres)
+    if (!string.IsNullOrEmpty(dbUrl))
     {
-        // If we are forced to use Postgres but the string looks like SQL Server, 
-        // it means the environment variables aren't set correctly.
-        if (activeString.Contains("Trusted_Connection") || activeString.Contains("mssqllocaldb"))
-        {
-             // If we're on Render but have no Postgres string, this will fail anyway.
-             // We'll try to use it but we really need the user to set the env var.
-        }
-
-        // Convert postgres:// URL to standard connection string if necessary
-        if (activeString.StartsWith("postgres://") || activeString.StartsWith("postgresql://"))
+        Console.WriteLine("DB Config: Using DATABASE_URL environment variable.");
+        string connStr = dbUrl;
+        
+        // Convert postgres:// URL to Npgsql connection string format if needed
+        if (dbUrl.StartsWith("postgres://") || dbUrl.StartsWith("postgresql://"))
         {
             try 
             {
-                var databaseUri = new Uri(activeString);
-                var userInfo = databaseUri.UserInfo.Split(':');
-                activeString = $"Host={databaseUri.Host};Port={databaseUri.Port};Username={userInfo[0]};Password={userInfo[1]};Database={databaseUri.LocalPath.TrimStart('/')};SSL Mode=Require;Trust Server Certificate=true";
+                var uri = new Uri(dbUrl);
+                var userInfo = uri.UserInfo.Split(':');
+                var user = userInfo[0];
+                var pass = userInfo.Length > 1 ? userInfo[1] : "";
+                connStr = $"Host={uri.Host};Port={uri.Port};Username={user};Password={pass};Database={uri.LocalPath.TrimStart('/')};SSL Mode=Require;Trust Server Certificate=true";
             }
-            catch { /* fallback to original if URI parsing fails */ }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"DB Config: Error parsing DATABASE_URL: {ex.Message}. Using raw string.");
+            }
         }
-        
-        // Final safety: Remove SQL Server specific keywords that crash Npgsql
-        var csBuilder = new System.Data.Common.DbConnectionStringBuilder { ConnectionString = activeString };
-        csBuilder.Remove("Trusted_Connection");
-        csBuilder.Remove("MultipleActiveResultSets");
-        csBuilder.Remove("Server");
-        csBuilder.Remove("Database");
-        csBuilder.Remove("Integrated Security");
-        csBuilder.Remove("Trusted Connection"); // sometimes has space
-        activeString = csBuilder.ConnectionString;
-        
-        options.UseNpgsql(activeString);
+        options.UseNpgsql(connStr);
+    }
+    else if (!string.IsNullOrEmpty(defaultConn))
+    {
+        // If the string contains "Host=" it's likely a Postgres string already
+        if (defaultConn.Contains("Host=", StringComparison.OrdinalIgnoreCase) || 
+            defaultConn.Contains("Username=", StringComparison.OrdinalIgnoreCase))
+        {
+            Console.WriteLine("DB Config: Using Postgres connection string from DefaultConnection.");
+            options.UseNpgsql(defaultConn);
+        }
+        else
+        {
+            Console.WriteLine("DB Config: Using SQL Server connection string from DefaultConnection.");
+            options.UseSqlServer(defaultConn);
+        }
     }
     else
     {
-        options.UseSqlServer(activeString);
+        throw new InvalidOperationException("Database connection string not found. Please set DATABASE_URL or ConnectionStrings:DefaultConnection.");
     }
 });
 
