@@ -34,20 +34,28 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
         {
             try 
             {
-                var uri = new Uri(dbUrl);
-                var userInfo = (uri.UserInfo ?? "").Split(':');
-                var user = userInfo[0];
-                var pass = userInfo.Length > 1 ? userInfo[1] : "";
-                var host = uri.Host;
-                var port = uri.Port > 0 ? uri.Port : 5432;
-                var database = uri.LocalPath.TrimStart('/');
+                // URL format: postgres://user:password@host:port/database
+                var parts = dbUrl.Split(new[] { "://" }, StringSplitOptions.None);
+                var remaining = parts[1];
 
-                // Fallback for Host if Uri class misses it
-                if (string.IsNullOrEmpty(host) && dbUrl.Contains("@"))
-                {
-                    var afterAt = dbUrl.Split('@')[1];
-                    host = afterAt.Split(':')[0].Split('/')[0];
-                }
+                var atIndex = remaining.LastIndexOf('@');
+                var userInfoPart = atIndex > 0 ? remaining.Substring(0, atIndex) : "";
+                var hostDbPart = remaining.Substring(atIndex + 1);
+
+                var userPass = userInfoPart.Split(':');
+                var user = userPass[0];
+                var pass = userPass.Length > 1 ? userPass[1] : "";
+
+                var slashIndex = hostDbPart.IndexOf('/');
+                var hostPortPart = slashIndex > 0 ? hostDbPart.Substring(0, slashIndex) : hostDbPart;
+                var database = slashIndex > 0 ? hostDbPart.Substring(slashIndex + 1) : "";
+
+                // Remove any query params like ?sslmode=require
+                if (database.Contains("?")) database = database.Split('?')[0];
+
+                var hostPort = hostPortPart.Split(':');
+                var host = hostPort[0];
+                var port = hostPort.Length > 1 ? hostPort[1] : "5432";
 
                 connStr = $"Host={host};Port={port};Username={user};Password={pass};Database={database};SSL Mode=Require;Trust Server Certificate=true";
             }
