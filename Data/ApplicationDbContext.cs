@@ -18,6 +18,9 @@ namespace WindMonitoringSystem.Data
         /// <summary>Wind readings table</summary>
         public DbSet<WindReading> WindReadings { get; set; }
 
+        /// <summary>User alert thresholds</summary>
+        public DbSet<AlertThreshold> AlertThresholds { get; set; }
+
         protected override void OnModelCreating(ModelBuilder builder)
         {
             base.OnModelCreating(builder);

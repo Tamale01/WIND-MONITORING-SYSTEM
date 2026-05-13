@@ -52,6 +52,9 @@ namespace WindMonitoringSystem.Services
                     db.WindReadings.Add(reading);
                     await db.SaveChangesAsync(stoppingToken);
 
+                    // ── Check Alerts ───────────────────────────────────────────
+                    await CheckAlertsAsync(scope.ServiceProvider, reading.WindSpeed, stoppingToken);
+
                     _logger.LogDebug("Saved simulated reading: {Speed} m/s at {Time}", reading.WindSpeed, reading.Timestamp);
                 }
                 catch (Exception ex) when (!stoppingToken.IsCancellationRequested)
@@ -63,6 +66,34 @@ namespace WindMonitoringSystem.Services
             }
 
             _logger.LogInformation("BackgroundReadingService stopped.");
+        }
+
+        private async Task CheckAlertsAsync(IServiceProvider sp, decimal currentSpeed, CancellationToken ct)
+        {
+            var db = sp.GetRequiredService<ApplicationDbContext>();
+            var notifier = sp.GetRequiredService<INotificationService>();
+
+            // Find active alerts where threshold is exceeded
+            // and hasn't been triggered in the last 15 minutes to avoid spam
+            var quietPeriod = DateTime.UtcNow.AddMinutes(-15);
+            
+            var alerts = await db.AlertThresholds
+                .Where(a => a.IsActive && currentSpeed >= a.SpeedThreshold)
+                .Where(a => a.LastTriggeredAt == null || a.LastTriggeredAt <= quietPeriod)
+                .ToListAsync(ct);
+
+            foreach (var alert in alerts)
+            {
+                var msg = $"⚠️ ALERT: High wind speed detected! Current: {currentSpeed:F2} m/s. (Threshold: {alert.SpeedThreshold} m/s)";
+                await notifier.SendAlertAsync(alert.UserId, msg, alert.NotificationMethod);
+
+                alert.LastTriggeredAt = DateTime.UtcNow;
+            }
+
+            if (alerts.Any())
+            {
+                await db.SaveChangesAsync(ct);
+            }
         }
     }
 }

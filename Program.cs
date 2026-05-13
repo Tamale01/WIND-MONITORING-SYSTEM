@@ -45,6 +45,9 @@ builder.Services.AddSingleton<ISensorSimulator, SensorSimulator>();
 builder.Services.AddSingleton<ApiLogger>();
 builder.Services.AddHostedService<BackgroundReadingService>();
 
+builder.Services.AddSignalR();
+builder.Services.AddScoped<INotificationService, NotificationService>();
+
 // ── Build ─────────────────────────────────────────────────────────────────────
 var app = builder.Build();
 
@@ -75,5 +78,6 @@ app.MapControllerRoute(
     pattern: "{controller=Home}/{action=Index}/{id?}");
 
 app.MapRazorPages(); // Identity pages (Login, Register, etc.)
+app.MapHub<WindMonitoringSystem.Hubs.NotificationHub>("/notificationHub");
 
 app.Run();
