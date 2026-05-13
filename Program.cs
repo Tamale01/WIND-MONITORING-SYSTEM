@@ -37,7 +37,8 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
                 var userInfo = uri.UserInfo.Split(':');
                 var user = userInfo[0];
                 var pass = userInfo.Length > 1 ? userInfo[1] : "";
-                connStr = $"Host={uri.Host};Port={uri.Port};Username={user};Password={pass};Database={uri.LocalPath.TrimStart('/')};SSL Mode=Require;Trust Server Certificate=true";
+                var port = uri.Port > 0 ? uri.Port : 5432;
+                connStr = $"Host={uri.Host};Port={port};Username={user};Password={pass};Database={uri.LocalPath.TrimStart('/')};SSL Mode=Require;Trust Server Certificate=true";
             }
             catch (Exception ex)
             {
