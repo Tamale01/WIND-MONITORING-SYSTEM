@@ -28,23 +28,19 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
         Console.WriteLine("DB Config: Using DATABASE_URL environment variable.");
         string connStr = dbUrl;
         
-        // Convert postgres:// URL to Npgsql connection string format if needed
-        if (dbUrl.StartsWith("postgres://") || dbUrl.StartsWith("postgresql://"))
+        // Use NpgsqlConnectionStringBuilder to parse the URL and add SSL settings
+        try 
         {
-            try 
-            {
-                var uri = new Uri(dbUrl);
-                var userInfo = uri.UserInfo.Split(':');
-                var user = userInfo[0];
-                var pass = userInfo.Length > 1 ? userInfo[1] : "";
-                var port = uri.Port > 0 ? uri.Port : 5432;
-                connStr = $"Host={uri.Host};Port={port};Username={user};Password={pass};Database={uri.LocalPath.TrimStart('/')};SSL Mode=Require;Trust Server Certificate=true";
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"DB Config: Error parsing DATABASE_URL: {ex.Message}. Using raw string.");
-            }
+            var builder = new Npgsql.NpgsqlConnectionStringBuilder(dbUrl);
+            builder.SslMode = Npgsql.SslMode.Require;
+            builder.TrustServerCertificate = true;
+            connStr = builder.ConnectionString;
         }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"DB Config: Note - DATABASE_URL is not a URI or has a special format ({ex.Message}). Using as-is.");
+        }
+        
         options.UseNpgsql(connStr);
     }
     else if (isRender)
