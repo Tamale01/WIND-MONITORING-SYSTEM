@@ -15,10 +15,21 @@ var connectionString = builder.Configuration.GetConnectionString("DefaultConnect
 // ── Database & Identity ────────────────────────────────────────────────────────
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
 {
-    // Use PostgreSQL if the connection string looks like a Postgres one (standard on Render)
-    // otherwise fallback to SQL Server (standard for local dev)
-    if (connectionString.Contains("Host=") || connectionString.Contains("User ID=") || connectionString.Contains("postgres"))
+    var isPostgres = connectionString.StartsWith("postgres://") || 
+                     connectionString.StartsWith("postgresql://") || 
+                     connectionString.Contains("Host=") || 
+                     connectionString.Contains("User ID=") ||
+                     !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("RENDER"));
+
+    if (isPostgres)
     {
+        // If it's a postgres:// URL, we need to convert it for Npgsql
+        if (connectionString.StartsWith("postgres://") || connectionString.StartsWith("postgresql://"))
+        {
+            var databaseUri = new Uri(connectionString);
+            var userInfo = databaseUri.UserInfo.Split(':');
+            connectionString = $"Host={databaseUri.Host};Port={databaseUri.Port};Username={userInfo[0]};Password={userInfo[1]};Database={databaseUri.LocalPath.TrimStart('/')};SSL Mode=Require;Trust Server Certificate=true";
+        }
         options.UseNpgsql(connectionString);
     }
     else
