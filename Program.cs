@@ -26,19 +26,35 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
     if (!string.IsNullOrEmpty(dbUrl))
     {
         Console.WriteLine("DB Config: Using DATABASE_URL environment variable.");
+        // Clean the string (remove quotes or spaces)
+        dbUrl = dbUrl.Trim().Trim('"').Trim('\'');
         string connStr = dbUrl;
-        
-        // Use NpgsqlConnectionStringBuilder to parse the URL and add SSL settings
-        try 
+
+        if (dbUrl.Contains("://"))
         {
-            var builder = new Npgsql.NpgsqlConnectionStringBuilder(dbUrl);
-            builder.SslMode = Npgsql.SslMode.Require;
-            builder.TrustServerCertificate = true;
-            connStr = builder.ConnectionString;
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"DB Config: Note - DATABASE_URL is not a URI or has a special format ({ex.Message}). Using as-is.");
+            try 
+            {
+                var uri = new Uri(dbUrl);
+                var userInfo = (uri.UserInfo ?? "").Split(':');
+                var user = userInfo[0];
+                var pass = userInfo.Length > 1 ? userInfo[1] : "";
+                var host = uri.Host;
+                var port = uri.Port > 0 ? uri.Port : 5432;
+                var database = uri.LocalPath.TrimStart('/');
+
+                // Fallback for Host if Uri class misses it
+                if (string.IsNullOrEmpty(host) && dbUrl.Contains("@"))
+                {
+                    var afterAt = dbUrl.Split('@')[1];
+                    host = afterAt.Split(':')[0].Split('/')[0];
+                }
+
+                connStr = $"Host={host};Port={port};Username={user};Password={pass};Database={database};SSL Mode=Require;Trust Server Certificate=true";
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"DB Config: Note - Manual parsing failed ({ex.Message}). Using raw string.");
+            }
         }
         
         options.UseNpgsql(connStr);
