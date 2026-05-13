@@ -50,6 +50,12 @@ namespace WindMonitoringSystem.Services
             }
         }
 
+        public async Task BroadcastAlertAsync(string message)
+        {
+            await _hubContext.Clients.All.SendAsync("ReceiveAlert", message);
+            _logger.LogInformation("SignalR broadcast alert sent: {Msg}", message);
+        }
+
         private async Task SendEmailAsync(string email, string subject, string body)
         {
             try

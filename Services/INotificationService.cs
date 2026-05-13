@@ -6,5 +6,6 @@ namespace WindMonitoringSystem.Services
     public interface INotificationService
     {
         Task SendAlertAsync(string userId, string message, NotificationType method);
+        Task BroadcastAlertAsync(string message);
     }
 }

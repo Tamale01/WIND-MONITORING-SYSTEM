@@ -1,0 +1,12 @@
+**/.git
+**/.github
+**/.vscode
+**/bin
+**/obj
+**/*.db
+**/*.db-shm
+**/*.db-wal
+Dockerfile
+.dockerignore
+.gitignore
+README.md

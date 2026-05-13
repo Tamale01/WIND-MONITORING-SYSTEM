@@ -261,7 +261,27 @@ footer {
 }
 .fade-in-up { animation: fadeInUp .5s ease forwards; }
 
-/* ── Responsive ──────────────────────────────────────────────────────────── */
+/* Danger Alert Pulse */
+.pulse-danger {
+    animation: pulse-red 1.5s infinite;
+}
+
+@keyframes pulse-red {
+    0% {
+        transform: scale(1);
+        text-shadow: 0 0 0 rgba(252, 129, 129, 0);
+    }
+    50% {
+        transform: scale(1.05);
+        text-shadow: 0 0 20px rgba(252, 129, 129, 0.6);
+    }
+    100% {
+        transform: scale(1);
+        text-shadow: 0 0 0 rgba(252, 129, 129, 0);
+    }
+}
+
+/* Responsive */
 @media (max-width: 768px) {
     .speed-value { font-size: 3rem; }
     .gauge-container { width: 200px; height: 110px; }

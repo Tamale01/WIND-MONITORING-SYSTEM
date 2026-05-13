@@ -14,7 +14,18 @@ var connectionString = builder.Configuration.GetConnectionString("DefaultConnect
 
 // ── Database & Identity ────────────────────────────────────────────────────────
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
-    options.UseSqlServer(connectionString));
+{
+    // Use PostgreSQL if the connection string looks like a Postgres one (standard on Render)
+    // otherwise fallback to SQL Server (standard for local dev)
+    if (connectionString.Contains("Host=") || connectionString.Contains("User ID=") || connectionString.Contains("postgres"))
+    {
+        options.UseNpgsql(connectionString);
+    }
+    else
+    {
+        options.UseSqlServer(connectionString);
+    }
+});
 
 builder.Services.AddDatabaseDeveloperPageExceptionFilter();
 

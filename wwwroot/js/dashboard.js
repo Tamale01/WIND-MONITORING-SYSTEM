@@ -23,11 +23,20 @@
             const data = await res.json();
 
             // Animate speed value change
-            const newSpeed = parseFloat(data.windSpeed).toFixed(2);
-            if (speedEl.textContent !== newSpeed) {
+            const speed = parseFloat(data.windSpeed);
+            const newSpeedStr = speed.toFixed(2);
+            
+            if (speedEl.textContent !== newSpeedStr) {
                 speedEl.classList.add("speed-flash");
-                speedEl.textContent = newSpeed;
+                speedEl.textContent = newSpeedStr;
                 setTimeout(() => speedEl.classList.remove("speed-flash"), 600);
+            }
+
+            // Visual danger indicator
+            if (speed >= 25) {
+                speedEl.classList.add("text-danger", "pulse-danger");
+            } else {
+                speedEl.classList.remove("text-danger", "pulse-danger");
             }
 
             // Update gauge needle if present

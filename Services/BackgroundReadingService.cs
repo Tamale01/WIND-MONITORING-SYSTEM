@@ -18,6 +18,7 @@ namespace WindMonitoringSystem.Services
 
         // How often to capture a new reading (10 seconds)
         private readonly TimeSpan _interval = TimeSpan.FromSeconds(10);
+        private DateTime? _lastBroadcastTime;
 
         public BackgroundReadingService(
             IServiceScopeFactory scopeFactory,
@@ -52,7 +53,15 @@ namespace WindMonitoringSystem.Services
                     db.WindReadings.Add(reading);
                     await db.SaveChangesAsync(stoppingToken);
 
-                    // ── Check Alerts ───────────────────────────────────────────
+                    // ── Check Global Danger Alert ──────────────────────────────────
+                    if (reading.WindSpeed >= 25 && (_lastBroadcastTime == null || DateTime.UtcNow - _lastBroadcastTime > TimeSpan.FromMinutes(30)))
+                    {
+                        var notifier = scope.ServiceProvider.GetRequiredService<INotificationService>();
+                        await notifier.BroadcastAlertAsync($"🚨 EXTREME WEATHER ALERT: Dangerously high wind speed of {reading.WindSpeed:F2} m/s detected! Please take immediate safety precautions.");
+                        _lastBroadcastTime = DateTime.UtcNow;
+                    }
+
+                    // ── Check User-Specific Alerts ──────────────────────────────
                     await CheckAlertsAsync(scope.ServiceProvider, reading.WindSpeed, stoppingToken);
 
                     _logger.LogDebug("Saved simulated reading: {Speed} m/s at {Time}", reading.WindSpeed, reading.Timestamp);
