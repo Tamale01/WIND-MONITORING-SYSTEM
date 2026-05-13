@@ -1,0 +1,105 @@
+@* File: Views/Admin/Index.cshtml *@
+@{
+    ViewData["Title"] = "Admin Panel";
+}
+
+<div class="fade-in-up">
+    <div class="d-flex align-items-center mb-4">
+        <h1 class="mb-0" style="font-size:1.6rem;font-weight:700;">
+            <i class="bi bi-shield-lock me-2" style="color:var(--accent);"></i>Admin Panel
+        </h1>
+    </div>
+
+    @if (TempData["Message"] != null)
+    {
+        <div class="glass-card p-3 mb-4" style="border-color:rgba(104,211,145,0.3);background:rgba(104,211,145,0.07);">
+            <p class="mb-0" style="color:var(--success);">@TempData["Message"]</p>
+        </div>
+    }
+
+    <!-- Database Stats -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-4">
+            <div class="stat-card">
+                <div class="stat-label"><i class="bi bi-database me-1"></i>Total Readings</div>
+                <div class="stat-value">@ViewBag.Total</div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="stat-card">
+                <div class="stat-label"><i class="bi bi-cpu me-1"></i>Simulated</div>
+                <div class="stat-value" style="color:var(--accent);">@ViewBag.Simulated</div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="stat-card">
+                <div class="stat-label"><i class="bi bi-router me-1"></i>Real Sensor</div>
+                <div class="stat-value" style="color:var(--success);">@ViewBag.Real</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Actions Card -->
+    <div class="glass-card">
+        <div class="card-header-custom">
+            <i class="bi bi-tools" style="color:var(--accent);"></i> Data Management
+        </div>
+        <div class="card-body-custom">
+            <div class="row g-4">
+
+                <!-- Generate Samples -->
+                <div class="col-md-6">
+                    <div class="glass-card p-4 h-100">
+                        <h5 class="mb-2"><i class="bi bi-plus-circle me-2" style="color:var(--success);"></i>Generate Sample Data</h5>
+                        <p class="text-muted small mb-3">
+                            Inserts 100 random simulated wind readings spread across the past 7 days. Useful for testing charts and analytics.
+                        </p>
+                        <form asp-action="GenerateSamples" method="post" id="form-generate">
+                            @Html.AntiForgeryToken()
+                            <button type="submit" class="btn-wind btn-wind-primary" id="btn-generate">
+                                <i class="bi bi-lightning-charge"></i> Generate 100 Samples
+                            </button>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- Clear Simulated -->
+                <div class="col-md-6">
+                    <div class="glass-card p-4 h-100">
+                        <h5 class="mb-2"><i class="bi bi-trash me-2" style="color:var(--danger);"></i>Clear Simulated Readings</h5>
+                        <p class="text-muted small mb-3">
+                            Deletes all simulated readings from the database. Real sensor readings are kept intact.
+                        </p>
+                        <form asp-action="ClearSimulated" method="post" id="form-clear"
+                              onsubmit="return confirm('Delete all simulated readings? This cannot be undone.');">
+                            @Html.AntiForgeryToken()
+                            <button type="submit" class="btn-wind btn-wind-danger" id="btn-clear">
+                                <i class="bi bi-trash3"></i> Clear Simulated Readings
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <!-- API Info -->
+            <div class="mt-4 p-4 glass-card">
+                <h5 class="mb-3"><i class="bi bi-code-slash me-2" style="color:var(--accent);"></i>API Quick Reference</h5>
+                <table class="wind-table">
+                    <thead>
+                        <tr><th>Method</th><th>Endpoint</th><th>Auth</th><th>Description</th></tr>
+                    </thead>
+                    <tbody>
+                        <tr><td><span style="color:var(--success);">GET</span></td><td><code>/api/wind/status</code></td><td>None</td><td>System health check</td></tr>
+                        <tr><td><span style="color:var(--success);">GET</span></td><td><code>/api/wind/latest</code></td><td>Login</td><td>Latest reading</td></tr>
+                        <tr><td><span style="color:var(--success);">GET</span></td><td><code>/api/wind/history?hours=24</code></td><td>Login</td><td>History for N hours</td></tr>
+                        <tr><td><span style="color:var(--warning);">POST</span></td><td><code>/api/wind</code></td><td>Login / API Key</td><td>Submit real reading</td></tr>
+                    </tbody>
+                </table>
+                <p class="text-muted small mt-3 mb-0">
+                    API Key header: <code>X-Api-Key: wms-secret-api-key-2024</code> &nbsp;|&nbsp;
+                    <a href="/swagger" target="_blank"><i class="bi bi-box-arrow-up-right me-1"></i>Swagger UI</a>
+                </p>
+            </div>
+        </div>
+    </div>
+</div>

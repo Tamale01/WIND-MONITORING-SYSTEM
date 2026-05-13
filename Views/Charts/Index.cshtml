@@ -1,0 +1,63 @@
+@* File: Views/Charts/Index.cshtml *@
+@{
+    ViewData["Title"] = "Wind Charts";
+}
+
+<div class="fade-in-up">
+    <div class="d-flex align-items-center justify-content-between mb-4 flex-wrap gap-3">
+        <h1 class="mb-0" style="font-size:1.6rem;font-weight:700;">
+            <i class="bi bi-bar-chart-line me-2" style="color:var(--accent);"></i>Wind Speed History
+        </h1>
+
+        <!-- Date range picker buttons -->
+        <div class="d-flex gap-2">
+            <button class="range-btn" data-hours="6"  id="btn-6h">6 Hours</button>
+            <button class="range-btn active" data-hours="24" id="btn-24h">24 Hours</button>
+            <button class="range-btn" data-hours="168" id="btn-7d">7 Days</button>
+        </div>
+    </div>
+
+    <!-- Stats Summary Row -->
+    <div class="row g-3 mb-4">
+        <div class="col-6 col-md-3">
+            <div class="stat-card">
+                <div class="stat-label"><i class="bi bi-list-ol me-1"></i>Readings</div>
+                <div class="stat-value" id="stat-count">—</div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="stat-card">
+                <div class="stat-label"><i class="bi bi-calculator me-1"></i>Average</div>
+                <div class="stat-value" id="stat-avg" style="color:var(--warning);">—</div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="stat-card">
+                <div class="stat-label"><i class="bi bi-arrow-down-circle me-1"></i>Minimum</div>
+                <div class="stat-value" id="stat-min" style="color:var(--accent-2);">—</div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="stat-card">
+                <div class="stat-label"><i class="bi bi-arrow-up-circle me-1"></i>Maximum</div>
+                <div class="stat-value" id="stat-max" style="color:var(--danger);">—</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Chart Card -->
+    <div class="glass-card">
+        <div class="card-header-custom">
+            <i class="bi bi-graph-up" style="color:var(--accent);"></i> Wind Speed Over Time
+        </div>
+        <div class="card-body-custom">
+            <div style="position:relative;height:420px;">
+                <canvas id="windChart"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="~/js/charts.js" asp-append-version="true"></script>
+}

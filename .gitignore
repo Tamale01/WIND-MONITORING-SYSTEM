@@ -1,0 +1,42 @@
+## [Visual Studio]
+[Bb]in/
+[Oo]bj/
+[Tt]est[Rr]esults/
+[Vv]s/
+.vs/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+## [Build Results]
+[Dd]ebug/
+[Rr]elease/
+x64/
+x86/
+build/
+
+## [Database]
+*.db
+*.db-shm
+*.db-wal
+*.mdf
+*.ldf
+
+## [Logs]
+logs/api_log.txt
+
+## [OS]
+.DS_Store
+Thumbs.db
+
+## [Web]
+wwwroot/lib/
+node_modules/
+.env
+.env.*
+!.env.example
+
+## [EF Core]
+*.db-journal
+# Migrations/ are tracked in git

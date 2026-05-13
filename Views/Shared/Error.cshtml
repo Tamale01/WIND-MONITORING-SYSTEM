@@ -1,0 +1,18 @@
+@* File: Views/Shared/Error.cshtml *@
+@model WindMonitoringSystem.Models.ErrorViewModel
+@{
+    ViewData["Title"] = "Error";
+}
+
+<div class="text-center fade-in-up" style="padding:4rem 0;">
+    <div style="font-size:5rem;">⚠️</div>
+    <h1 class="hero-title mt-3">Something went wrong</h1>
+    <p class="hero-subtitle">An unexpected error occurred. Please try again.</p>
+    @if (Model?.ShowRequestId == true)
+    {
+        <p class="text-muted small">Request ID: <code>@Model.RequestId</code></p>
+    }
+    <a asp-controller="Home" asp-action="Index" class="btn-wind btn-wind-primary mt-3">
+        <i class="bi bi-house"></i> Return Home
+    </a>
+</div>
