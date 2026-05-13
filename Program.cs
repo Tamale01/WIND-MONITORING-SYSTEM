@@ -23,9 +23,9 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
 
     bool isRender = !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("RENDER"));
 
-    if (!string.IsNullOrEmpty(dbUrl))
+    if (!string.IsNullOrEmpty(dbUrl) && dbUrl.Length > 15) // Sanity check: must be longer than just 'postgres://'
     {
-        Console.WriteLine("DB Config: Using DATABASE_URL environment variable.");
+        Console.WriteLine($"DB Config: Using DATABASE_URL environment variable (Length: {dbUrl.Length}).");
         // 1. Clean the string
         dbUrl = dbUrl.Trim().Trim('"').Trim('\'');
         string connStr = dbUrl;
