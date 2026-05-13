@@ -15,34 +15,55 @@ var connectionString = builder.Configuration.GetConnectionString("DefaultConnect
 // ── Database & Identity ────────────────────────────────────────────────────────
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
 {
-    // Render typically provides 'DATABASE_URL' for its internal Postgres
-    var databaseUrl = Environment.GetEnvironmentVariable("DATABASE_URL");
+    // Render provides various environment variables for the database
+    var databaseUrl = Environment.GetEnvironmentVariable("DATABASE_URL") 
+                   ?? Environment.GetEnvironmentVariable("INTERNAL_DATABASE_URL")
+                   ?? Environment.GetEnvironmentVariable("EXTERNAL_DATABASE_URL");
     
-    // Check if we should use Postgres
-    var usePostgres = !string.IsNullOrEmpty(databaseUrl) || 
-                      connectionString.StartsWith("postgres://") || 
-                      connectionString.StartsWith("postgresql://") || 
-                      connectionString.Contains("Host=") || 
-                      !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("RENDER"));
+    bool isRender = !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("RENDER"));
+    
+    // Determine the final connection string to use
+    string activeString = !string.IsNullOrEmpty(databaseUrl) ? databaseUrl : connectionString;
+
+    // Decide whether to use Postgres
+    bool usePostgres = isRender || 
+                       activeString.StartsWith("postgres://") || 
+                       activeString.StartsWith("postgresql://") || 
+                       activeString.Contains("Host=");
 
     if (usePostgres)
     {
-        // Use the environment variable URL if available, otherwise use the connection string
-        var activeString = !string.IsNullOrEmpty(databaseUrl) ? databaseUrl : connectionString;
+        // If we are forced to use Postgres but the string looks like SQL Server, 
+        // it means the environment variables aren't set correctly.
+        if (activeString.Contains("Trusted_Connection") || activeString.Contains("mssqllocaldb"))
+        {
+             // If we're on Render but have no Postgres string, this will fail anyway.
+             // We'll try to use it but we really need the user to set the env var.
+        }
 
-        // If it's a postgres:// URL, we must convert it for Npgsql
+        // Convert postgres:// URL to standard connection string if necessary
         if (activeString.StartsWith("postgres://") || activeString.StartsWith("postgresql://"))
         {
-            var databaseUri = new Uri(activeString);
-            var userInfo = databaseUri.UserInfo.Split(':');
-            activeString = $"Host={databaseUri.Host};Port={databaseUri.Port};Username={userInfo[0]};Password={userInfo[1]};Database={databaseUri.LocalPath.TrimStart('/')};SSL Mode=Require;Trust Server Certificate=true";
+            try 
+            {
+                var databaseUri = new Uri(activeString);
+                var userInfo = databaseUri.UserInfo.Split(':');
+                activeString = $"Host={databaseUri.Host};Port={databaseUri.Port};Username={userInfo[0]};Password={userInfo[1]};Database={databaseUri.LocalPath.TrimStart('/')};SSL Mode=Require;Trust Server Certificate=true";
+            }
+            catch { /* fallback to original if URI parsing fails */ }
         }
+        
+        // Final safety: Remove SQL Server specific keywords that crash Npgsql
+        activeString = activeString.Replace("Trusted_Connection=True;", "")
+                                   .Replace("Trusted_Connection=true;", "")
+                                   .Replace("MultipleActiveResultSets=true;", "")
+                                   .Replace("MultipleActiveResultSets=True;", "");
         
         options.UseNpgsql(activeString);
     }
     else
     {
-        options.UseSqlServer(connectionString);
+        options.UseSqlServer(activeString);
     }
 });
 
