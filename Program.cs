@@ -54,10 +54,14 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
         }
         
         // Final safety: Remove SQL Server specific keywords that crash Npgsql
-        activeString = activeString.Replace("Trusted_Connection=True;", "")
-                                   .Replace("Trusted_Connection=true;", "")
-                                   .Replace("MultipleActiveResultSets=true;", "")
-                                   .Replace("MultipleActiveResultSets=True;", "");
+        var csBuilder = new System.Data.Common.DbConnectionStringBuilder { ConnectionString = activeString };
+        csBuilder.Remove("Trusted_Connection");
+        csBuilder.Remove("MultipleActiveResultSets");
+        csBuilder.Remove("Server");
+        csBuilder.Remove("Database");
+        csBuilder.Remove("Integrated Security");
+        csBuilder.Remove("Trusted Connection"); // sometimes has space
+        activeString = csBuilder.ConnectionString;
         
         options.UseNpgsql(activeString);
     }
