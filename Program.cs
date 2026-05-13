@@ -15,22 +15,30 @@ var connectionString = builder.Configuration.GetConnectionString("DefaultConnect
 // ── Database & Identity ────────────────────────────────────────────────────────
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
 {
-    var isPostgres = connectionString.StartsWith("postgres://") || 
-                     connectionString.StartsWith("postgresql://") || 
-                     connectionString.Contains("Host=") || 
-                     connectionString.Contains("User ID=") ||
-                     !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("RENDER"));
+    // Render typically provides 'DATABASE_URL' for its internal Postgres
+    var databaseUrl = Environment.GetEnvironmentVariable("DATABASE_URL");
+    
+    // Check if we should use Postgres
+    var usePostgres = !string.IsNullOrEmpty(databaseUrl) || 
+                      connectionString.StartsWith("postgres://") || 
+                      connectionString.StartsWith("postgresql://") || 
+                      connectionString.Contains("Host=") || 
+                      !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("RENDER"));
 
-    if (isPostgres)
+    if (usePostgres)
     {
-        // If it's a postgres:// URL, we need to convert it for Npgsql
-        if (connectionString.StartsWith("postgres://") || connectionString.StartsWith("postgresql://"))
+        // Use the environment variable URL if available, otherwise use the connection string
+        var activeString = !string.IsNullOrEmpty(databaseUrl) ? databaseUrl : connectionString;
+
+        // If it's a postgres:// URL, we must convert it for Npgsql
+        if (activeString.StartsWith("postgres://") || activeString.StartsWith("postgresql://"))
         {
-            var databaseUri = new Uri(connectionString);
+            var databaseUri = new Uri(activeString);
             var userInfo = databaseUri.UserInfo.Split(':');
-            connectionString = $"Host={databaseUri.Host};Port={databaseUri.Port};Username={userInfo[0]};Password={userInfo[1]};Database={databaseUri.LocalPath.TrimStart('/')};SSL Mode=Require;Trust Server Certificate=true";
+            activeString = $"Host={databaseUri.Host};Port={databaseUri.Port};Username={userInfo[0]};Password={userInfo[1]};Database={databaseUri.LocalPath.TrimStart('/')};SSL Mode=Require;Trust Server Certificate=true";
         }
-        options.UseNpgsql(connectionString);
+        
+        options.UseNpgsql(activeString);
     }
     else
     {
