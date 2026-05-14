@@ -1,6 +1,7 @@
 // File: Data/DbInitializer.cs
 using Microsoft.AspNetCore.Identity;
 using WindMonitoringSystem.Models;
+using Microsoft.EntityFrameworkCore;
 
 namespace WindMonitoringSystem.Data
 {

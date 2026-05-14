@@ -55,8 +55,7 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
                     Username = user,
                     Password = pass,
                     Database = database,
-                    SslMode = SslMode.Require,
-                    TrustServerCertificate = true
+                    SslMode = SslMode.Require
                 };
                 connStr = npgsqlBuilder.ToString();
                 
@@ -138,7 +137,7 @@ builder.Services.AddScoped<INotificationService, NotificationService>();
 builder.Services.Configure<ForwardedHeadersOptions>(options =>
 {
     options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
-    options.KnownNetworks.Clear();
+    options.KnownIPNetworks.Clear();
     options.KnownProxies.Clear();
 });
 
