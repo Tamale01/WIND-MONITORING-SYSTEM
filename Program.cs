@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using WindMonitoringSystem.Data;
 using WindMonitoringSystem.Services;
 using Microsoft.AspNetCore.HttpOverrides;
+using Npgsql;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -46,10 +47,20 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
                 // Remove query parameters from database name if present
                 if (database.Contains("?")) database = database.Split('?')[0];
 
-                // Build standard Npgsql connection string
-                connStr = $"Host={host};Port={port};Username={user};Password={pass};Database={database};SSL Mode=Require;Trust Server Certificate=true;";
+                // Build standard Npgsql connection string using the builder for safety
+                var npgsqlBuilder = new NpgsqlConnectionStringBuilder
+                {
+                    Host = host,
+                    Port = port,
+                    Username = user,
+                    Password = pass,
+                    Database = database,
+                    SslMode = SslMode.Require,
+                    TrustServerCertificate = true
+                };
+                connStr = npgsqlBuilder.ToString();
                 
-                Console.WriteLine($"DB Config: Parsed DATABASE_URL into standard format (Host={host}, Database={database}).");
+                Console.WriteLine($"DB Config: Parsed DATABASE_URL using NpgsqlConnectionStringBuilder.");
             }
             catch (Exception ex)
             {
