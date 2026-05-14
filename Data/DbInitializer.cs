@@ -21,7 +21,9 @@ namespace WindMonitoringSystem.Data
             var logger      = scope.ServiceProvider.GetRequiredService<ILogger<ApplicationDbContext>>();
 
             // Ensure database and migrations are applied
+            logger.LogInformation("Ensuring database is created and initialized...");
             await db.Database.EnsureCreatedAsync();
+            logger.LogInformation("Database is ready.");
 
             // ── Seed Roles ─────────────────────────────────────────────────────────
             if (!await roleManager.RoleExistsAsync("Admin"))

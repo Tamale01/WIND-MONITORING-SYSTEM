@@ -13,6 +13,11 @@ RUN dotnet publish "WindMonitoringSystem.csproj" -c Release -o /app/publish /p:U
 FROM mcr.microsoft.com/dotnet/aspnet:10.0
 WORKDIR /app
 COPY --from=publish /app/publish .
-# Render uses the PORT environment variable
+
+# Render uses the PORT environment variable. 
+# In .NET 8+, ASPNETCORE_HTTP_PORTS is the preferred way to set the listening port.
+ENV ASPNETCORE_HTTP_PORTS=10000
+# Fallback for older versions or specific middleware
 ENV ASPNETCORE_URLS=http://+:10000
+
 ENTRYPOINT ["dotnet", "WindMonitoringSystem.dll"]

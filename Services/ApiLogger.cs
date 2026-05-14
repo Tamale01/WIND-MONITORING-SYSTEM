@@ -12,19 +12,36 @@ namespace WindMonitoringSystem.Services
 
         public ApiLogger(IWebHostEnvironment env)
         {
-            // Store log file inside the app root under logs/
-            var logsDir = Path.Combine(env.ContentRootPath, "logs");
-            Directory.CreateDirectory(logsDir);
-            _logPath = Path.Combine(logsDir, "api_log.txt");
+            try
+            {
+                // Store log file inside the app root under logs/
+                var logsDir = Path.Combine(env.ContentRootPath, "logs");
+                if (!Directory.Exists(logsDir))
+                {
+                    Directory.CreateDirectory(logsDir);
+                }
+                _logPath = Path.Combine(logsDir, "api_log.txt");
+            }
+            catch
+            {
+                _logPath = Path.GetTempFileName(); // Fallback
+            }
         }
 
         /// <summary>Logs an API call with timestamp, endpoint, and user.</summary>
         public void Log(string endpoint, string user)
         {
-            var entry = $"[{DateTime.UtcNow:yyyy-MM-dd HH:mm:ss} UTC] ENDPOINT={endpoint} USER={user}{Environment.NewLine}";
-            lock (_lock)
+            try
             {
-                File.AppendAllText(_logPath, entry);
+                var entry = $"[{DateTime.UtcNow:yyyy-MM-dd HH:mm:ss} UTC] ENDPOINT={endpoint} USER={user}{Environment.NewLine}";
+                lock (_lock)
+                {
+                    File.AppendAllText(_logPath, entry);
+                }
+            }
+            catch
+            {
+                // Silence logging errors to prevent app crashes in restricted environments
             }
         }
     }

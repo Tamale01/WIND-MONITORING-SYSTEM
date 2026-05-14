@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using WindMonitoringSystem.Data;
 using WindMonitoringSystem.Services;
+using Microsoft.AspNetCore.HttpOverrides;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -14,8 +15,9 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
 {
     // 1. Try to get connection string from DATABASE_URL (Render Postgres)
-    var dbUrl = Environment.GetEnvironmentVariable("DATABASE_URL") 
-             ?? Environment.GetEnvironmentVariable("INTERNAL_DATABASE_URL")
+    // Priority: INTERNAL_DATABASE_URL > DATABASE_URL > EXTERNAL_DATABASE_URL
+    var dbUrl = Environment.GetEnvironmentVariable("INTERNAL_DATABASE_URL")
+             ?? Environment.GetEnvironmentVariable("DATABASE_URL") 
              ?? Environment.GetEnvironmentVariable("EXTERNAL_DATABASE_URL");
 
     // 2. Fallback to appsettings / environment ConnectionStrings:DefaultConnection
@@ -23,9 +25,8 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
 
     bool isRender = !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("RENDER"));
 
-    if (!string.IsNullOrEmpty(dbUrl) && dbUrl.Length > 20) 
+    if (!string.IsNullOrEmpty(dbUrl)) 
     {
-        Console.WriteLine($"DB Config: Processing DATABASE_URL (Length: {dbUrl.Length}).");
         dbUrl = dbUrl.Trim().Trim('"').Trim('\'');
         string connStr = dbUrl;
 
@@ -33,27 +34,31 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
         {
             try 
             {
-                // URL: postgresql://user:password@host:port/database
+                // Format: postgresql://user:password@host:port/database
                 var uri = new Uri(dbUrl);
                 var userInfo = (uri.UserInfo ?? "").Split(':');
-                var user = userInfo[0];
-                var pass = userInfo.Length > 1 ? userInfo[1] : "";
+                var user = Uri.UnescapeDataString(userInfo[0]);
+                var pass = userInfo.Length > 1 ? Uri.UnescapeDataString(userInfo[1]) : "";
                 var host = uri.Host;
                 var port = uri.Port > 0 ? uri.Port : 5432;
-                var database = uri.LocalPath.TrimStart('/');
+                var database = uri.AbsolutePath.TrimStart('/');
                 
-                // Clean database name of any query params
+                // Remove query parameters from database name if present
                 if (database.Contains("?")) database = database.Split('?')[0];
 
-                // Build a standard Key=Value string
-                connStr = $"Host={host};Port={port};Username={user};Password={pass};Database={database};SSL Mode=Require;Trust Server Certificate=true";
+                // Build standard Npgsql connection string
+                connStr = $"Host={host};Port={port};Username={user};Password={pass};Database={database};SSL Mode=Require;Trust Server Certificate=true;";
                 
-                Console.WriteLine($"DB Config: Converted URL to standard Host={host} format.");
+                Console.WriteLine($"DB Config: Parsed DATABASE_URL into standard format (Host={host}, Database={database}).");
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"DB Config: Note - URL conversion failed ({ex.Message}). Using raw string.");
+                Console.WriteLine($"DB Config: WARNING - Failed to parse DATABASE_URL URI ({ex.Message}). Using raw string.");
             }
+        }
+        else
+        {
+            Console.WriteLine("DB Config: Using DATABASE_URL as a standard connection string.");
         }
         
         options.UseNpgsql(connStr);
@@ -118,6 +123,14 @@ builder.Services.AddHostedService<BackgroundReadingService>();
 builder.Services.AddSignalR();
 builder.Services.AddScoped<INotificationService, NotificationService>();
 
+// Configure Forwarded Headers for Render (behind load balancer)
+builder.Services.Configure<ForwardedHeadersOptions>(options =>
+{
+    options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
+    options.KnownNetworks.Clear();
+    options.KnownProxies.Clear();
+});
+
 // ── Build ─────────────────────────────────────────────────────────────────────
 var app = builder.Build();
 
@@ -125,6 +138,8 @@ var app = builder.Build();
 await DbInitializer.SeedAsync(app.Services);
 
 // ── Middleware Pipeline ───────────────────────────────────────────────────────
+app.UseForwardedHeaders();
+
 if (app.Environment.IsDevelopment())
 {
     app.UseMigrationsEndPoint();
