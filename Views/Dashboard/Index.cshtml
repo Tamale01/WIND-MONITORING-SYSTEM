@@ -97,6 +97,65 @@
         </div>
     </div>
 
+    <!-- Real Time Cards (Requested) -->
+    <div class="row g-4 mb-4 fade-in-up" style="animation-delay: 0.1s;">
+        <!-- Current Gust -->
+        <div class="col-md-4">
+            <div class="stat-card h-100">
+                <div class="stat-label">🌬️ CURRENT GUST</div>
+                <div class="stat-value" style="color:var(--accent);">32.4 km/h</div>
+                <div class="text-muted small mt-1">Gusting</div>
+            </div>
+        </div>
+        <!-- Today's Peak -->
+        <div class="col-md-4">
+            <div class="stat-card h-100">
+                <div class="stat-label">📊 TODAY'S PEAK</div>
+                <div class="stat-value" style="color:var(--warning);">67.2 km/h</div>
+                <div class="text-muted small mt-1">at 14:32</div>
+            </div>
+        </div>
+        <!-- Active Alerts -->
+        <div class="col-md-4">
+            <div class="stat-card h-100">
+                <div class="stat-label">⚠️ ACTIVE ALERTS</div>
+                <div class="stat-value pulse-danger" style="color:var(--danger);">2</div>
+                <div class="text-muted small mt-1">(1 high, 1 med)</div>
+            </div>
+        </div>
+        <!-- Wind Map -->
+        <div class="col-md-4">
+            <div class="stat-card h-100">
+                <div class="stat-label">🗺️ WIND MAP</div>
+                <div class="stat-value mt-2" style="color:var(--accent-2); font-size:1.2rem; display: flex; align-items: center; justify-content: center; gap: 8px;">
+                    <i class="bi bi-map"></i> [Live Map]
+                </div>
+            </div>
+        </div>
+        <!-- 6h Trend -->
+        <div class="col-md-4">
+            <div class="stat-card h-100">
+                <div class="stat-label">📈 6h TREND</div>
+                <div class="stat-value mt-2" style="color:var(--success); font-size:1.2rem; display: flex; align-items: center; justify-content: center; gap: 8px;">
+                    <i class="bi bi-graph-up"></i> [Sparkline]
+                </div>
+                <div class="text-muted small mt-1" style="color:var(--success)!important;">+12% from avg</div>
+            </div>
+        </div>
+        <!-- Recent Logs -->
+        <div class="col-md-4">
+            <div class="stat-card h-100 d-flex flex-column align-items-center">
+                <div class="stat-label">📋 RECENT LOGS</div>
+                <div class="text-start mt-2 w-100" style="max-width: 180px;">
+                    <ul class="text-muted small mb-0 ps-3">
+                        <li class="mb-1">API call 45s ago</li>
+                        <li>Sensor online</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Latest 10 Readings Table -->
     <div class="glass-card fade-in-up">
         <div class="card-header-custom">

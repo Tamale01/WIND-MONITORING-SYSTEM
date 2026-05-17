@@ -31,11 +31,12 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
         dbUrl = dbUrl.Trim().Trim('"').Trim('\'');
         string connStr = dbUrl;
 
+        // Render provides a URI like postgresql://user:pass@host/db
+        // Npgsql supports this, but manual parsing is safer for injecting SSL requirements.
         if (dbUrl.Contains("://"))
         {
             try 
             {
-                // Format: postgresql://user:password@host:port/database
                 var uri = new Uri(dbUrl);
                 var userInfo = (uri.UserInfo ?? "").Split(':');
                 var user = Uri.UnescapeDataString(userInfo[0]);
@@ -44,10 +45,9 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
                 var port = uri.Port > 0 ? uri.Port : 5432;
                 var database = uri.AbsolutePath.TrimStart('/');
                 
-                // Remove query parameters from database name if present
+                // Remove query parameters from database name if present in path
                 if (database.Contains("?")) database = database.Split('?')[0];
 
-                // Build standard Npgsql connection string using the builder for safety
                 var npgsqlBuilder = new NpgsqlConnectionStringBuilder
                 {
                     Host = host,
@@ -55,15 +55,24 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
                     Username = user,
                     Password = pass,
                     Database = database,
-                    SslMode = SslMode.Require
+                    SslMode = SslMode.Require,
+                    TrustServerCertificate = true, // Often required for Render's managed Postgres
+                    Pooling = true,
+                    // KeepAlive is helpful for long-running background tasks on some platforms
+                    KeepAlive = 30 
                 };
                 connStr = npgsqlBuilder.ToString();
                 
-                Console.WriteLine($"DB Config: Parsed DATABASE_URL using NpgsqlConnectionStringBuilder.");
+                Console.WriteLine($"DB Config: Successfully parsed DATABASE_URL into Npgsql format (Host={host}, Database={database}).");
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"DB Config: WARNING - Failed to parse DATABASE_URL URI ({ex.Message}). Using raw string.");
+                Console.WriteLine($"DB Config: WARNING - Manual parse failed ({ex.Message}). Using raw string.");
+                // We fallback to the raw string, but we should still try to append SSL if it's a URI
+                if (!dbUrl.Contains("sslmode=", StringComparison.OrdinalIgnoreCase))
+                {
+                    connStr = dbUrl + (dbUrl.Contains("?") ? "&" : "?") + "sslmode=require&TrustServerCertificate=true";
+                }
             }
         }
         else
@@ -75,16 +84,13 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
     }
     else if (isRender)
     {
-        // We are on Render but DATABASE_URL is missing. 
-        // Do not fall back to SQL Server as it will crash.
-        throw new InvalidOperationException("CRITICAL: Running on Render but 'DATABASE_URL' is not set. " + 
-            "Please add 'DATABASE_URL' to your Render Environment Variables with your PostgreSQL connection string.");
+        throw new InvalidOperationException("CRITICAL: Running on Render but 'DATABASE_URL' is not set.");
     }
     else if (!string.IsNullOrEmpty(defaultConn))
     {
-        // Local development or manual config
         if (defaultConn.Contains("Host=", StringComparison.OrdinalIgnoreCase) || 
-            defaultConn.Contains("Username=", StringComparison.OrdinalIgnoreCase))
+            defaultConn.Contains("Username=", StringComparison.OrdinalIgnoreCase) ||
+            defaultConn.Contains("postgresql://", StringComparison.OrdinalIgnoreCase))
         {
             Console.WriteLine("DB Config: Using Postgres connection string from DefaultConnection.");
             options.UseNpgsql(defaultConn);
